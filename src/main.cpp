@@ -1,5 +1,7 @@
 #include <glad.h>
 #include <glfw3.h>
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
 #include <iostream>
 #include <cmath> 
 #include "shader.hpp"
@@ -15,7 +17,7 @@ const unsigned int SCR_WIDTH = 800;
 const unsigned int SCR_HEIGHT = 600;
 const char* PATH_TO_FILE_VERTEX_SHADER = "/home/lpdgrl/Project/code/learnopengl/src/shaders/shader.vs";
 const char* PATH_TO_FILE_FRAGMENT_SHADER = "/home/lpdgrl/Project/code/learnopengl/src/shaders/shader.fs";
-const char* PATH_TO_TEXTURE1 = "/home/lpdgrl/Project/code/learnopengl/data/textures/container.jpg";
+const char* PATH_TO_TEXTURE1 = "/home/lpdgrl/Project/code/learnopengl/data/textures/wall.jpg";
 const char* PATH_TO_TEXTURE2 = "/home/lpdgrl/Project/code/learnopengl/data/textures/awesomeface.png";
 
 int main()
@@ -49,29 +51,12 @@ int main()
 
     // vertices of triangle
     float vertices[] = {
-        // positions          // colors           // texture coords
-        0.5f,  0.5f, 0.0f,   1.0f, 0.0f, 0.0f,   0.55f, 0.55f,   // top right
-        0.5f, -0.5f, 0.0f,   0.0f, 1.0f, 0.0f,   0.55f, 0.45f,   // bottom right
-        -0.5f, -0.5f, 0.0f,   0.0f, 0.0f, 1.0f,  0.45f, 0.45f,   // bottom left
-        -0.5f,  0.5f, 0.0f,   1.0f, 1.0f, 0.0f,   0.45f, 0.55f    // top left 
+        // positions          // texture coords
+        0.5f,  0.5f, 0.0f,   1.0f, 1.0f,   // top right
+        0.5f, -0.5f, 0.0f,   1.0f, 0.0f,   // bottom right
+       -0.5f, -0.5f, 0.0f,   0.0f, 0.0f,   // bottom left
+       -0.5f,  0.5f, 0.0f,   0.0f, 1.0f    // top left 
     };
-
-    /*// vertices of rectangle 
-    float vertices[] = {
-        // first triangle
-        0.5f,   0.5f,   0.0f,   // top right
-        0.5f,  -0.5f,   0.0f,   // bottom right
-       // second triangle
-       -0.5f,  -0.5f,   0.0f,   // bottom left
-       -0.5f,   0.5f,   0.0f    // top left
-    };*/
-
-    float vertices_second[] = {
-        // first triangle
-        0.0f, -0.5f, 0.0f,  // left
-        0.9f, -0.5f, 0.0f,  // right
-        0.45f, 0.5f, 0.0f   // top 
-    }; 
 
     unsigned int indices[] = {
         0, 1, 3,    // first triangle
@@ -92,17 +77,24 @@ int main()
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
 
+    // position attribute
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)0);
+    glEnableVertexAttribArray(0);
+    // texture attribute
+    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));
+    glEnableVertexAttribArray(1);
+    
     // load and create a texture
     unsigned int texture1, texture2; 
     glGenTextures(1, &texture1);
     glBindTexture(GL_TEXTURE_2D, texture1);
 
     // setting wrapping
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
     // setting filtration
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
     // load file of texture
     int width, height, nrChannels;
@@ -117,7 +109,7 @@ int main()
         glGenerateMipmap(GL_TEXTURE_2D);
     }
     else {
-        std::cerr << "Failed to load texture" << std::endl;
+        std::cerr << "Failed to load texture" << PATH_TO_TEXTURE1 << std::endl;
     }
 
     stbi_image_free(data);
@@ -142,20 +134,10 @@ int main()
         glGenerateMipmap(GL_TEXTURE_2D);
     }
     else {
-        std::cerr << "Failed to load texture" << std::endl;
+        std::cerr << "Failed to load texture" << PATH_TO_TEXTURE2 << std::endl;
     }
 
     stbi_image_free(data);
-
-    // position attribute
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
-    glEnableVertexAttribArray(0);
-    // color attribute
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(3 * sizeof(float)));
-    glEnableVertexAttribArray(1);
-    // texture attribute
-    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(6 * sizeof(float)));
-    glEnableVertexAttribArray(2);
 
     // Wireframe mode
     // glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
@@ -167,8 +149,7 @@ int main()
     shader.use();
     shader.setInt("texture1", 0);
     shader.setInt("texture2", 1);
-
-    float value_inter = 0.2f;
+ 
     // render loop
     while (!glfwWindowShouldClose(window))
     {
@@ -184,29 +165,30 @@ int main()
         glUniform4f(vertexColorLocation, 0.0f, greenValue, 0.0f, 1.0f); */
         
         // processInputKeyOfMove(window, shader);
-        float change_value_fr_shader = changeValueInterFragmentShader(window);
-
-        if (change_value_fr_shader != -1.0f) {
-            value_inter += change_value_fr_shader;
-            if (value_inter >= 1.0f) {
-                value_inter = 1.0f;
-            }
-            else if (value_inter <= 0.0f) {
-                value_inter = 0.0f;
-            }
-        } 
-
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, texture1);
         glActiveTexture(GL_TEXTURE1);
         glBindTexture(GL_TEXTURE_2D, texture2);
 
-        shader.setFloat("value_inter", value_inter);
-
         shader.use();
+        glm::mat4 trans = glm::mat4(1.0f);
+        trans = glm::translate(trans, glm::vec3(0.5f, -0.5f, 0.0f));
+        trans = glm::rotate(trans, sin((float)glfwGetTime()), glm::vec3(0.0, 0.0, 1.0));
+
+        unsigned int transformLoc = glGetUniformLocation(shader.ID, "transform");
+        glUniformMatrix4fv(transformLoc, 1, GL_FALSE, glm::value_ptr(trans));
+        
         glBindVertexArray(VAO);
         glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
-        //glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+        
+        trans = glm::mat4(1.0f);
+        trans = glm::translate(trans, glm::vec3(-0.2f, 0.2f, 0.0f));
+        float scaleAmount = static_cast<float>(cos(glfwGetTime()));
+        std::cout << "scaleAmount = " << scaleAmount << std::endl;
+        trans = glm::scale(trans, glm::vec3(scaleAmount, 0.5f, 0.5f));
+        glUniformMatrix4fv(transformLoc, 1, GL_FALSE, glm::value_ptr(trans));
+
+        glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 
         glfwSwapBuffers(window);
         glfwPollEvents();
